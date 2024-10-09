@@ -88,6 +88,10 @@ pipeline {
                 }
             }
 
+            environment {
+                CI_ENVIRONMENT_URL="PLACEHOLDER"
+            }
+
             steps {
                 sh '''
                     npm install netlify-cli node-jq
@@ -101,6 +105,14 @@ pipeline {
             post {
                 always {
                     publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'playwright-report', reportFiles: 'index.html', reportName: 'Staging E2E Report', reportTitles: '', useWrapperFileDirectly: true])
+                }
+            }
+        }
+
+        stage ('Approval') {
+            steps {
+                timeout(time: 15, unit: 'MINUTES') {
+                    input message: 'Do you wish to deploy to production ?', ok: 'Yes, I am sure !'
                 }
             }
         }
