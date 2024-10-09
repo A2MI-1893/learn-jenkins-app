@@ -89,19 +89,46 @@ pipeline {
             }
             steps {
                 sh '''
-                    npm install netlify-cli
-                    $NETLIFY --version
-                    echo "Deploying to prod. Site ID : $NETLIFY_SITE_ID"
+                    npm install netlify-cli node-jq
                     $NETLIFY login
-                    $NETLIFY status
-                    $NETLIFY deploy --dir=build
+                    $NETLIFY deploy --dir=build --json > deploy-output.json
                 '''
+                script {
+                    env.STAGING_URL = sh(script: "node_modules/.bin/node-jq -r '.deploy_url' deploy-output.json", returnStdout: true)
+                }
+            }
+        }
+
+        stage('Staging E2E') {
+            agent {
+                docker {
+                    image 'mcr.microsoft.com/playwright:v1.39.0-jammy'
+                    reuseNode true
+                }
+            }
+
+            environment {
+                CI_ENVIRONMENT_URL = "${env.STAGING_URL}"
+            }
+
+            steps {
+                sh '''
+                    npx playwright test  --reporter=html
+                '''
+            }
+
+            post {
+                always {
+                    publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'playwright-report', reportFiles: 'index.html', reportName: 'Staging E2E Report', reportTitles: '', useWrapperFileDirectly: true])
+                }
             }
         }
 
         stage ('Approval') {
             steps {
-                input message: 'Do you wish to deploy to production ?', ok: 'Yes, I am sure !'
+                timeout(time: 15, unit: 'MINUTES') {
+                    input message: 'Do you wish to deploy to production ?', ok: 'Yes, I am sure !'
+                }
             }
         }
 
@@ -115,10 +142,7 @@ pipeline {
             steps {
                 sh '''
                     npm install netlify-cli
-                    $NETLIFY --version
-                    echo "Deploying to prod. Site ID : $NETLIFY_SITE_ID"
                     $NETLIFY login
-                    $NETLIFY status
                     $NETLIFY deploy --dir=build --prod
                 '''
             }
@@ -144,7 +168,7 @@ pipeline {
 
             post {
                 always {
-                    publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'playwright-report', reportFiles: 'index.html', reportName: 'Playwright E2E Report', reportTitles: '', useWrapperFileDirectly: true])
+                    publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'playwright-report', reportFiles: 'index.html', reportName: 'Prod E2E Report', reportTitles: '', useWrapperFileDirectly: true])
                 }
             }
         }
