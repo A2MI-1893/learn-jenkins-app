@@ -4,11 +4,16 @@ pipeline {
     environment {
         NETLIFY_SITE_ID = '9a4445ef-e51f-42f9-bd29-a9fcb8c26e06'
         NETFLIFY_AUTH_TOKEN = credentials('NETLIFY_TOKEN')
-        NETLIFY = 'node_modules/.bin/netlify'
         REACT_APP_VERSION = "1.2.$BUILD_ID"
     }
 
     stages {
+
+        stage('Docker') {
+            steps {
+                sh 'docker build -t my-playwright .'
+            }
+        }
 
         stage('Build') {
             agent {
@@ -58,15 +63,14 @@ pipeline {
                 stage('E2E') {
                     agent {
                         docker {
-                            image 'mcr.microsoft.com/playwright:v1.39.0-jammy'
+                            image 'my-playwright'
                             reuseNode true
                         }
                     }
 
                     steps {
                         sh '''
-                            npm install serve
-                            node_modules/.bin/serve -s build &
+                            serve -s build &
                             sleep 10
                             npx playwright test  --reporter=html
                         '''
@@ -84,7 +88,7 @@ pipeline {
         stage('Deploy staging') {
             agent {
                 docker {
-                    image 'mcr.microsoft.com/playwright:v1.39.0-jammy'
+                    image 'my-playwright'
                     reuseNode true
                 }
             }
@@ -95,10 +99,9 @@ pipeline {
 
             steps {
                 sh '''
-                    npm install netlify-cli node-jq
-                    $NETLIFY login
-                    $NETLIFY deploy --dir=build --json > deploy-output.json
-                    CI_ENVIRONMENT_URL=$(node_modules/.bin/node-jq -r '.deploy_url' deploy-output.json)
+                    netlify login
+                    netlify deploy --dir=build --json > deploy-output.json
+                    CI_ENVIRONMENT_URL=$(node-jq -r '.deploy_url' deploy-output.json)
                     npx playwright test  --reporter=html
                 '''
             }
@@ -113,7 +116,7 @@ pipeline {
         stage('Deploy prod') {
             agent {
                 docker {
-                    image 'mcr.microsoft.com/playwright:v1.39.0-jammy'
+                    image 'my-playwright'
                     reuseNode true
                 }
             }
@@ -124,9 +127,8 @@ pipeline {
 
             steps {
                 sh '''
-                    npm install netlify-cli
-                    $NETLIFY login
-                    $NETLIFY deploy --dir=build --prod
+                    netlify login
+                    netlify deploy --dir=build --prod
                     npx playwright test  --reporter=html
                 '''
             }
