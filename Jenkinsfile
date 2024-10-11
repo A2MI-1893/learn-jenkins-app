@@ -95,7 +95,7 @@ pipeline {
                 sh '''
                     netlify login
                     netlify deploy --dir=build --json > deploy-output.json
-                    CI_ENVIRONMENT_URL=$(node-jq -r '.deploy_url' deploy-output.json)
+                    CI_ENVIRONMENT_URL=$(jq -r '.deploy_url' deploy-output.json)
                     npx playwright test  --reporter=html
                 '''
             }
@@ -107,7 +107,7 @@ pipeline {
             }
         }
 
-        stage('Deploy prod') {
+        /* stage('Deploy prod') {
             agent {
                 docker {
                     image 'my-playwright'
@@ -132,6 +132,6 @@ pipeline {
                     publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'playwright-report', reportFiles: 'index.html', reportName: 'Prod E2E Report', reportTitles: '', useWrapperFileDirectly: true])
                 }
             }
-        }
+        } */
     }
 }
