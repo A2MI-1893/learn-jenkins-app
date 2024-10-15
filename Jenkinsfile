@@ -15,11 +15,11 @@ pipeline {
                     image 'amazon/aws-cli'
                     args "--entrypoint=''"
                 }
-                steps {
-                    sh '''
-                        aws --version
-                    '''
-                }
+            }
+            steps {
+                sh '''
+                    aws --version
+                '''
             }
         }
 
