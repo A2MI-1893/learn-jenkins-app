@@ -9,6 +9,20 @@ pipeline {
 
     stages {
 
+        stage('AWS') {
+            agent {
+                docker {
+                    image 'amazon/aws-cli'
+                    args "--entrypoint=''"
+                }
+                steps {
+                    sh '''
+                        aws --version
+                    '''
+                }
+            }
+        }
+
         stage('Build') {
             agent {
                 docker {
@@ -18,13 +32,8 @@ pipeline {
             }
             steps {
                 sh '''
-                    echo "A small change"
-                    ls -la
-                    node --version
-                    npm --version
                     npm ci
                     npm run build
-                    ls -la
                 '''
             }
         }
